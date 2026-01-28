@@ -9,15 +9,14 @@ app = Flask(__name__)
 CORS(app)
 
 # ================== ENV VARIABLES ==================
-PAYHERO_API_USERNAME = os.getenv("PAYHERO_API_USERNAME")
-PAYHERO_API_PASSWORD = os.getenv("PAYHERO_API_PASSWORD")
-ACCOUNT_ID = os.getenv("PAYHERO_ACCOUNT_ID")
-CHANNEL_ID = os.getenv("PAYHERO_CHANNEL_ID")
-CALLBACK_URL = os.getenv("CALLBACK_URL")
+PAYHERO_API_USERNAME = os.getenv("PAYHERO_API_USERNAME")  # YuXlnS9YRAiTaNGFqFSo
+PAYHERO_API_PASSWORD = os.getenv("PAYHERO_API_PASSWORD")  # pZqjrrcVbVtPDFt09kR7hH16T4L2B2rTwrmc8aJz
+ACCOUNT_ID = os.getenv("PAYHERO_ACCOUNT_ID")            # 4346
+CHANNEL_ID = os.getenv("PAYHERO_CHANNEL_ID")            # must be set in your env
+CALLBACK_URL = os.getenv("CALLBACK_URL")                # your callback URL
 
 # ✅ PayHero v2 STK Push endpoint
-PAYHERO_URL ="https://backend.payhero.co.ke/api/v2/payments"
-"
+PAYHERO_URL = "https://backend.payhero.co.ke/api/v2/payments/stk_push"
 
 # ===================================================
 
