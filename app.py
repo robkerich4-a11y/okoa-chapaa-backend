@@ -5,39 +5,51 @@ import os
 import time
 
 app = Flask(__name__)
-CORS(app)  # allow frontend to call this API
+CORS(app)  # allow frontend (Vercel) to call this API
 
-# Load environment variables
-PAYHERO_AUTH = os.getenv("PAYHERO_AUTH_TOKEN")  # Should include 'Basic ...'
+# =========================
+# Environment Variables
+# =========================
+PAYHERO_AUTH = os.getenv("PAYHERO_AUTH_TOKEN")  # Must start with 'Basic '
 ACCOUNT_ID = os.getenv("PAYHERO_ACCOUNT_ID")
 CHANNEL_ID = os.getenv("PAYHERO_CHANNEL_ID")
-CALLBACK_URL = os.getenv("CALLBACK_URL")  # Must be publicly accessible (HTTPS)
+CALLBACK_URL = os.getenv("CALLBACK_URL")  # Public HTTPS callback
 
-PAYHERO_URL = "https://api.payhero.co.ke/v1/mpesa/stk-push"
+# ✅ CORRECT PayHero STK Push endpoint
+PAYHERO_URL = "https://api.payhero.co.ke/v1/payments/mpesa/stk-push"
 
-# Check environment variables at startup
-missing_vars = [name for name, value in [
-    ("PAYHERO_AUTH_TOKEN", PAYHERO_AUTH),
-    ("PAYHERO_ACCOUNT_ID", ACCOUNT_ID),
-    ("PAYHERO_CHANNEL_ID", CHANNEL_ID),
-    ("CALLBACK_URL", CALLBACK_URL)
-] if not value]
+# =========================
+# Startup validation
+# =========================
+missing_vars = []
+if not PAYHERO_AUTH:
+    missing_vars.append("PAYHERO_AUTH_TOKEN")
+if not ACCOUNT_ID:
+    missing_vars.append("PAYHERO_ACCOUNT_ID")
+if not CHANNEL_ID:
+    missing_vars.append("PAYHERO_CHANNEL_ID")
+if not CALLBACK_URL:
+    missing_vars.append("CALLBACK_URL")
 
 if missing_vars:
-    print(f"ERROR: Missing environment variables: {', '.join(missing_vars)}")
+    print("❌ ERROR: Missing environment variables:", ", ".join(missing_vars))
+else:
+    print("✅ All PayHero environment variables loaded")
 
+# =========================
+# STK Push Endpoint
+# =========================
 @app.route("/api/stk-push", methods=["POST"])
 def stk_push():
-    data = request.json
+    data = request.get_json(force=True)
+
     phone = data.get("phone")
     amount = data.get("amount")
-    reference = data.get("reference", f"PROC_{int(time.time())}")  # fallback unique reference
+    reference = data.get("reference", f"OKOA_{int(time.time())}")
 
-    # Validate input
     if not phone or not amount:
         return jsonify({"error": "phone and amount are required"}), 400
 
-    # Payload for PayHero
     payload = {
         "account_id": ACCOUNT_ID,
         "channel_id": CHANNEL_ID,
@@ -48,44 +60,65 @@ def stk_push():
     }
 
     headers = {
-        "Authorization": PAYHERO_AUTH.strip(),  # Must include 'Basic ...'
+        "Authorization": PAYHERO_AUTH.strip(),  # MUST include 'Basic '
         "Content-Type": "application/json",
         "Accept": "application/json"
     }
 
     try:
-        response = requests.post(PAYHERO_URL, json=payload, headers=headers, timeout=20)
-        print("PAYHERO STATUS:", response.status_code)
-        print("PAYHERO RESPONSE:", response.text)
+        response = requests.post(
+            PAYHERO_URL,
+            json=payload,
+            headers=headers,
+            timeout=20
+        )
+
+        print("🔵 PAYHERO STATUS:", response.status_code)
+        print("🔵 PAYHERO RESPONSE:", response.text)
 
         try:
-            resp_json = response.json()
+            response_data = response.json()
         except Exception:
-            resp_json = {"error": "Invalid JSON response from PayHero", "raw": response.text}
+            response_data = {
+                "error": "Invalid JSON from PayHero",
+                "raw": response.text
+            }
 
         if not response.ok:
-            # Return full details for debugging
             return jsonify({
                 "error": "PayHero rejected request",
                 "status_code": response.status_code,
-                "details": resp_json
+                "details": response_data
             }), response.status_code
 
-        return jsonify(resp_json), response.status_code
+        return jsonify(response_data), 200
 
     except requests.exceptions.RequestException as e:
-        print("HTTP REQUEST ERROR:", str(e))
-        return jsonify({"error": "Failed to reach PayHero", "details": str(e)}), 500
+        print("❌ REQUEST ERROR:", str(e))
+        return jsonify({
+            "error": "Failed to reach PayHero",
+            "details": str(e)
+        }), 500
 
-
+# =========================
+# PayHero Callback Endpoint
+# =========================
 @app.route("/api/payhero/callback", methods=["POST"])
 def payhero_callback():
-    # Log callback from PayHero
-    print("PAYHERO CALLBACK RECEIVED:", request.json)
+    data = request.get_json(force=True)
+    print("✅ PAYHERO CALLBACK RECEIVED:", data)
     return jsonify({"status": "received"}), 200
 
+# =========================
+# Health Check (optional)
+# =========================
+@app.route("/", methods=["GET"])
+def health():
+    return jsonify({"status": "OKOA CHAPAA BACKEND RUNNING"}), 200
 
+# =========================
+# App Runner (Render)
+# =========================
 if __name__ == "__main__":
-    # For Render: use host 0.0.0.0 and port 5000 or the environment PORT
     port = int(os.getenv("PORT", 5000))
-    app.run(debug=True, host="0.0.0.0", port=port)
+    app.run(host="0.0.0.0", port=port, debug=True)
