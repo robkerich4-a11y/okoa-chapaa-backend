@@ -16,7 +16,8 @@ CHANNEL_ID = os.getenv("PAYHERO_CHANNEL_ID")
 CALLBACK_URL = os.getenv("CALLBACK_URL")
 
 # ✅ PayHero v2 STK Push endpoint
-PAYHERO_URL = "https://backend.payhero.co.ke/api/v2/payments/stk_push"
+PAYHERO_URL ="https://backend.payhero.co.ke/api/v2/payments"
+"
 
 # ===================================================
 
