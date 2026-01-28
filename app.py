@@ -3,18 +3,20 @@ from flask_cors import CORS
 import requests
 import os
 import time
+import base64
 
 app = Flask(__name__)
 CORS(app)
 
 # ================== ENV VARIABLES ==================
-PAYHERO_AUTH = os.getenv("PAYHERO_AUTH_TOKEN")  # Must start with "Basic "
+PAYHERO_API_USERNAME = os.getenv("PAYHERO_API_USERNAME")  # Your API username
+PAYHERO_SERVICE_TOKEN = os.getenv("PAYHERO_SERVICE_TOKEN")  # Service token from PayHero
 ACCOUNT_ID = os.getenv("PAYHERO_ACCOUNT_ID")
 CHANNEL_ID = os.getenv("PAYHERO_CHANNEL_ID")
 CALLBACK_URL = os.getenv("CALLBACK_URL")
 
 # ✅ CORRECT PAYHERO ENDPOINT
-PAYHERO_URL = "https://api.payhero.co.ke/v1/payments/mpesa/stk-push"
+PAYHERO_URL = "https://api.payhero.co.ke/v2/stk-push"
 
 # ===================================================
 
@@ -43,8 +45,12 @@ def stk_push():
         "callback_url": CALLBACK_URL
     }
 
+    # PayHero requires Basic Auth with service token
+    token = f"{PAYHERO_API_USERNAME}:{PAYHERO_SERVICE_TOKEN}"
+    auth_header = "Basic " + base64.b64encode(token.encode()).decode()
+
     headers = {
-        "Authorization": PAYHERO_AUTH.strip(),
+        "Authorization": auth_header,
         "Accept": "application/json",
         "Content-Type": "application/json"
     }
