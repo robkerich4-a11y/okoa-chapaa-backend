@@ -9,8 +9,7 @@ app = Flask(__name__)
 CORS(app)
 
 # ================== ENV VARIABLES ==================
-PAYHERO_API_USERNAME = os.getenv("PAYHERO_API_USERNAME")  # Your API username
-PAYHERO_SERVICE_TOKEN = os.getenv("PAYHERO_SERVICE_TOKEN")  # Service token from PayHero
+PAYHERO_AUTH = os.getenv("PAYHERO_AUTH_TOKEN")  # Must start with "Basic "
 ACCOUNT_ID = os.getenv("PAYHERO_ACCOUNT_ID")
 CHANNEL_ID = os.getenv("PAYHERO_CHANNEL_ID")
 CALLBACK_URL = os.getenv("CALLBACK_URL")
