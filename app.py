@@ -9,20 +9,20 @@ app = Flask(__name__)
 CORS(app)
 
 # ================== ENV VARIABLES ==================
-PAYHERO_API_USERNAME = os.getenv("PAYHERO_API_USERNAME")  # YuXlnS9YRAiTaNGFqFSo
-PAYHERO_API_PASSWORD = os.getenv("PAYHERO_API_PASSWORD")  # pZqjrrcVbVtPDFt09kR7hH16T4L2B2rTwrmc8aJz
-ACCOUNT_ID = os.getenv("PAYHERO_ACCOUNT_ID")            # 4346
-CHANNEL_ID = os.getenv("PAYHERO_CHANNEL_ID")            # must be set in your env
-CALLBACK_URL = os.getenv("CALLBACK_URL")                # your callback URL
+PAYHERO_API_USERNAME = os.getenv("PAYHERO_API_USERNAME")
+PAYHERO_API_PASSWORD = os.getenv("PAYHERO_API_PASSWORD")
 
-# ✅ PayHero v2 STK Push endpoint
-PAYHERO_URL = "https://backend.payhero.co.ke/api/v2/payments/stk_push"
+PAYHERO_CHANNEL_ID = os.getenv("PAYHERO_CHANNEL_ID")  # 5217
+CALLBACK_URL = os.getenv("CALLBACK_URL")  # https://okoa-chapaa-backend.onrender.com/api/payhero/callback
 
+# PayHero v2 STK Push endpoint
+PAYHERO_URL = "https://backend.payhero.co.ke/api/v2/payments"
 # ===================================================
+
 
 @app.route("/", methods=["GET"])
 def home():
-    return jsonify({"status": "OK"}), 200
+    return jsonify({"status": "OK", "service": "OKOA CHAPAA BACKEND"}), 200
 
 
 @app.route("/api/stk-push", methods=["POST"])
@@ -32,20 +32,24 @@ def stk_push():
     phone = data.get("phone")
     amount = data.get("amount")
     reference = data.get("reference", f"OKOA_{int(time.time())}")
+    customer_name = data.get("customer_name", "Customer")
 
     if not phone or not amount:
         return jsonify({"error": "phone and amount are required"}), 400
 
-    # 🔐 Build Basic Auth token correctly
+    # 🔐 Build Basic Auth token
     auth_string = f"{PAYHERO_API_USERNAME}:{PAYHERO_API_PASSWORD}"
     auth_token = base64.b64encode(auth_string.encode()).decode()
 
     payload = {
         "amount": int(amount),
         "phone_number": phone,
-        "channel_id": int(CHANNEL_ID),
+        "channel_id": int(PAYHERO_CHANNEL_ID),
+        "provider": "m-pesa",
         "external_reference": reference,
+        "customer_name": customer_name,
         "callback_url": CALLBACK_URL
+        # credential_id is OPTIONAL → only if using your own Daraja keys
     }
 
     headers = {
@@ -62,20 +66,25 @@ def stk_push():
             timeout=30
         )
 
-        print("STK PUSH SENT")
+        print("=== STK PUSH REQUEST ===")
         print("STATUS:", response.status_code)
         print("RESPONSE:", response.text)
 
         return jsonify(response.json()), response.status_code
 
-    except Exception as e:
-        print("SERVER ERROR:", str(e))
-        return jsonify({"error": "Server error", "details": str(e)}), 500
+    except requests.exceptions.RequestException as e:
+        print("REQUEST ERROR:", str(e))
+        return jsonify({"error": "Request failed", "details": str(e)}), 500
 
 
 @app.route("/api/payhero/callback", methods=["POST"])
 def payhero_callback():
-    print("CALLBACK RECEIVED:", request.json)
+    data = request.get_json(force=True)
+    print("=== PAYHERO CALLBACK RECEIVED ===")
+    print(data)
+
+    # TODO: save transaction status to DB here
+
     return jsonify({"status": "received"}), 200
 
 
